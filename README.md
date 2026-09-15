@@ -1,4 +1,4 @@
-# DSH Mobile UI（本地分支）
+# DSH Mobile UI
 
 [`@canary-builds/dsh-mobile-ui`](https://github.com/Canary-Builds/dsh-mobile-ui) 的本地分支，把 DSH 的 Web 界面按手机的方式重排，并让页面能作为独立窗口装到主屏幕上。
 
