@@ -1,69 +1,56 @@
-# DSH Mobile UI
+# DSH Mobile UI（本地分支）
 
-A mobile/PWA-first UI redesign for the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH) web GUI, delivered as one Cordis plugin with a host half and a browser half. minimal, app-like: the sidebar gets out of your way, the reading area wins, and the app installs as a proper standalone window.
+[`@canary-builds/dsh-mobile-ui`](https://github.com/Canary-Builds/dsh-mobile-ui) 的本地分支，把 DSH 的 Web 界面按手机的方式重排，并让页面能作为独立窗口装到主屏幕上。
 
-Everything visual is scoped to app windows and touch devices (`display-mode: standalone/fullscreen/minimal-ui`, or `hover:none` + `pointer:coarse`). **Desktop browser tabs are untouched** and render the stock UI.
+上游写的是 DSH `0.1.1-rc.x`。在 `0.1.5` 上它有一处布局会对不齐，iOS 那边也有几个老问题，顺手都处理了。包名改成 `@local/dsh-mobile-ui`，免得和上游混在一起。
 
-## Features
+## 改动
 
-**Sidebar (app-style)**
-- Collapsing the sidebar hides the 56px icon rail entirely — the chat area spans the full screen width
-- A floating whale launcher (the DSH whale mark, theme-following) appears centered in the first column's header band; click to expand
-- Expanding opens the sidebar as a **fullscreen overlay** covering the chat instead of pushing it
-- Opening a session from the list **auto-collapses** the sidebar (workspace group rows and row menus are ignored)
+**顶栏右侧的按钮被切掉**
 
-**Top bar**
-- Title row spans the full width; tab row (Chat / Trajectory) gains two right-aligned controls: the agent-preset mode chip (abbreviated to `STD` / `PTC` / `MIN` / `CTR`, en+zh) and the session-log export as a bare icon-only button
+折叠侧边栏时，顶栏最右边那个按钮有一半在屏幕外。DSH 给这个按钮设了 `margin-right: -16px`，本意是抵消 header 自己的 `padding-right`；上游把那处 `padding-right` 改成了 0，抵消没了，负边距就变成实打实地往外冲。去掉覆盖就行。
 
-**Settings**
-- The settings sheet fills the entire screen (no margins, no radius)
-- Section nav collapses to an icon-only rail (labels stay in the accessibility tree)
-- Picker rows (Permission / Agent preset / Enter behavior): selector on top full-width, description filling the area below
+**点输入框整页放大**
 
-**Chat area**
-- Side padding reduced (32px → 12px left / 6px right), reserved scrollbar gutter removed
-- User bubbles: fit-content size, right-anchored, uncapped width (extend all the way left when long), square right corners, overflow-safe
+输入框其实是 Lexical 的可编辑 div，字号 14px。iOS 碰到小于 16px 的可编辑元素，聚焦时会把整页缩放。把字号提到 16px。
 
-**PWA**
-- Host route serves a standalone-window manifest (`display: standalone` + `display_override`), so the GUI installs as a real app window — the Android notification bar stays visible (the shipped manifest uses `fullscreen`, which hides it)
+**滚到边缘会回弹**
 
-## Install
+`overscroll-behavior: none`。
 
-Requires Node.js 22.19+ and DeepSeek Harness. Install into your web profile:
+**双指缩放**
 
-```sh
-dsh plugin --profile web add @canary-builds/dsh-mobile-ui
+iOS Safari 不理会 `user-scalable=no`，所以改拦 WebKit 的手势事件。只拦多指，单指滚动不受影响。
+
+**主屏图标**
+
+上游的 manifest 只给了 SVG。iOS 不认 SVG 的 `apple-touch-icon`，会退而拿页面截图当图标；而 DSH 的静态服务器没有 `.png` 的 MIME 映射，直接放 PNG 会被当成 `application/octet-stream` 发出去。这里自带图片和路由，响应带正确类型，同时注入 `apple-touch-icon` 链接。
+
+图标是白底蓝鲸，180 / 192 / 512 三档。
+
+逐条的技术细节写在 [FORK.md](FORK.md)，上游原文见 [README.upstream.md](README.upstream.md)。
+
+## 安装
+
+在 profile 的 `package.json` 里：
+
+```json
+{
+  "dependencies": {
+    "@local/dsh-mobile-ui": "link:../../local-plugins/dsh-mobile-ui"
+  },
+  "dsh": {
+    "profile": {
+      "bundles": ["...", "@local/dsh-mobile-ui"]
+    }
+  }
+}
 ```
 
-Restart DSH and refresh the browser. To update, run the same command again and restart. The package includes its Profile Bundle patch and prebuilt browser module; no separate installer, build, or manual composition row is needed for a fresh install.
+用 `link:` 而不是 `file:`。后者是复制，并且只复制 `files` 字段里列出的内容（`icons/` 就这么漏过一次）；前者是软链接，改完直接生效。
 
-### Migrating from Splash
+然后 `pnpm install`，重启 DSH。
 
-This is the successor to `dsh-plugin-splash` in the renamed `Canary-Builds/dsh-mobile-ui` repository. Remove the old `splash` row that names `dsh-plugin-splash` from your profile's `cordis.patch.yml`, then run:
+## 许可
 
-```sh
-dsh plugin --profile web remove dsh-plugin-splash
-dsh plugin --profile web add @canary-builds/dsh-mobile-ui
-```
-
-If you installed the interim `@canary-builds/dsh-wpa` package, remove it with `dsh plugin --profile web remove @canary-builds/dsh-wpa` before installing Mobile UI.
-
-Restart DSH. Keep other profile overrides intact. Do not load both packages together; both own the same UI behavior and manifest route. GitHub redirects the previous repository URL, but npm package names do not redirect automatically.
-
-## Compatibility
-
-The redesign is implemented as scoped CSS keyed off the shipped UI's DOM: stable public attributes (`data-sidebar-collapsed`, `data-details-collapsed`, slot wrappers) wherever possible, plus CSS-module class hashes for elements that expose nothing else. **Those hashes are build-specific** — the plugin targets the `0.1.1-rc.x` DSH web frontend and may silently no-op (never break) on a version whose bundles re-hash. If a feature stops applying after a DSH upgrade, update the hashes in `lib/client.js` (serve `/plugins/@deepseek-ai/dsh-client-ui-*/client.js` on your install and grep the new prefixes).
-
-## Behavior notes
-
-- The manifest override takes precedence over the dist fallback server; disabling the plugin row restores the shipped manifest on restart
-- All effects are fiber-owned: removing the plugin row cleanly reverts every style, slot entry, listener, and route
-- The floating launcher and auto-collapse never run in desktop browser tabs
-
-## License
-
-MIT
-
-## Development and releases
-
-Run `npm test` and `npm run test:package`. See [RELEASING.md](RELEASING.md) for automated npm publication and GitHub releases. [Report an issue](https://github.com/Canary-Builds/dsh-mobile-ui/issues) · [Canary Builds](https://canarybuilds.com).
+沿用上游的 MIT，版权归 Canary Builds。
