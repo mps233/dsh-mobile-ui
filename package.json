@@ -1,0 +1,61 @@
+{
+  "name": "@local/dsh-mobile-ui",
+  "version": "1.1.2-local.1",
+  "description": "Mobile and PWA interface enhancements for DeepSeek Harness, inside your existing web UI.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "icons",
+    "cordis.patch.yml",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "cordis",
+    "pwa",
+    "ui",
+    "dsh-plugin"
+  ],
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-layout"
+      ]
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Canary-Builds/dsh-mobile-ui.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Canary-Builds/dsh-mobile-ui/issues"
+  },
+  "homepage": "https://github.com/Canary-Builds/dsh-mobile-ui#readme",
+  "author": "Canary Builds",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "test:package": "node scripts/check-package.mjs"
+  }
+}
